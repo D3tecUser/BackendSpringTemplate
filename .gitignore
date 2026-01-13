@@ -1,0 +1,109 @@
+############################################
+# Java / Spring
+############################################
+*.class
+*.log
+*.ctxt
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+*.hprof
+
+############################################
+# Build outputs
+############################################
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+############################################
+# Spring / Runtime
+############################################
+logs/
+log/
+*.log.*
+*.out
+*.pid
+
+# If you generate/upload files locally
+uploads/
+tmp/
+temp/
+
+############################################
+# IntelliJ IDEA
+############################################
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+############################################
+# Eclipse / STS
+############################################
+.classpath
+.project
+.settings/
+.springBeans
+.factorypath
+
+############################################
+# VS Code
+############################################
+.vscode/
+.DS_Store
+
+############################################
+# OS / Editor temp
+############################################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.nfs*
+
+############################################
+# Environment / Secrets
+############################################
+.env
+.env.*
+!.env.example
+
+# Spring config overrides (evite commitar credenciais)
+application-local.yml
+application-local.yaml
+application-local.properties
+application-dev.yml
+application-dev.yaml
+application-dev.properties
+
+# Optional: keystores/certs/keys
+*.jks
+*.p12
+*.pem
+*.key*
