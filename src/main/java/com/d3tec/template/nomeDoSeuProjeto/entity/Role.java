@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "role")
@@ -31,6 +32,20 @@ public class Role implements Serializable {
             generator = "role_seq_generator"
     )
     private Long id;
-
     private String name;
+    private LocalDateTime createdAt;
+
+    public enum RoleValues{
+        BASIC(1L),
+        ADMIN(2L);
+
+        Long roleId;
+        RoleValues(Long value){
+            this.roleId = value;
+        }
+
+        public Long getRoleId() {
+            return roleId;
+        }
+    }
 }

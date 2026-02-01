@@ -95,11 +95,7 @@ $RECYCLE.BIN/
 !.env.example
 
 # Spring config overrides (evite commitar credenciais)
-application-local.yml
-application-local.yaml
 application-local.properties
-application-dev.yml
-application-dev.yaml
 application-dev.properties
 
 # Optional: keystores/certs/keys
@@ -107,3 +103,4 @@ application-dev.properties
 *.p12
 *.pem
 *.key*
+*.pub*
