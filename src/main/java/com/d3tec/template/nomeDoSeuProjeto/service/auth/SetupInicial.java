@@ -9,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +25,13 @@ public class SetupInicial implements ApplicationRunner {
     private final BCryptPasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
+    private final Environment environment;
+
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerPath;
 
     @Value("${bootstrap.admin.email}")
     private String adminEmail;
@@ -52,5 +62,18 @@ public class SetupInicial implements ApplicationRunner {
         userRepository.save(admin);
 
         log.info("Setup inicial: usuário ADMIN criado com email={}", adminEmail);
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void logSwaggerUrl() {
+        String port = environment.getProperty("local.server.port", environment.getProperty("server.port", "8080"));
+
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+
+        String url = swaggerPath.startsWith("/") ? base + swaggerPath : base + "/" + swaggerPath;
+
+        log.info("Swagger UI disponível em: {}", url);
+
+        log.info("OpenAPI JSON disponível em: {}/v3/api-docs", base);
     }
 }

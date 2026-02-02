@@ -3,7 +3,6 @@ package com.d3tec.template.nomeDoSeuProjeto.service.auth;
 import com.d3tec.template.nomeDoSeuProjeto.dto.LoginRequest;
 import com.d3tec.template.nomeDoSeuProjeto.dto.LoginResponse;
 import com.d3tec.template.nomeDoSeuProjeto.dto.RegisterRequest;
-import com.d3tec.template.nomeDoSeuProjeto.dto.RegisterResponse;
 import com.d3tec.template.nomeDoSeuProjeto.entity.Role;
 import com.d3tec.template.nomeDoSeuProjeto.entity.User;
 import com.d3tec.template.nomeDoSeuProjeto.repository.RoleRepository;
@@ -65,11 +64,11 @@ public class AuthService {
         return loginResponse;
     }
 
-    public RegisterResponse register(RegisterRequest registerRequest) {
+    public String register(RegisterRequest registerRequest) {
         // Verifica se o usuario ja existe no banco de dados
         var existingUser = userRepository.findByEmail(registerRequest.getEmail());
         if ( existingUser.isPresent() ) {
-            throw new BadCredentialsException("Um usuário com esse email já existe!");
+            throw new BadCredentialsException("E-mail já cadastrado");
         }
 
         var basicRole = roleRepository.findByName("BASIC")
@@ -82,7 +81,7 @@ public class AuthService {
 
         var newUser = userRepository.save(user);
 
-        return new RegisterResponse(newUser);
+        return "Usuário cadastrado com sucesso!";
     }
 
     private boolean isLoginCorret(String loginPassword, String userPassword) {
