@@ -8,6 +8,7 @@ import com.d3tec.template.nomeDoSeuProjeto.entity.User;
 import com.d3tec.template.nomeDoSeuProjeto.exception.exceptions.ConflictException;
 import com.d3tec.template.nomeDoSeuProjeto.repository.RoleRepository;
 import com.d3tec.template.nomeDoSeuProjeto.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,20 +32,42 @@ public class AuthService {
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final RoleRepository roleRepository;
 
+    private final BruteforceProtectionService bruteforceProtectionService;
+    private final HttpServletRequest request;
+
     @Value("${spring.application.name}")
     private String issuer;
 
     public LoginResponse login(LoginRequest loginRequest) {
+        String email = loginRequest.getEmail().trim().toLowerCase();
+        String ip = clientIp(request);
+
+        String keyIp = "ip:" + ip;
+        String keyIpEmail = "ip_email:" + ip + "|" + email;
+
+        bruteforceProtectionService.assertNotBlocked(keyIp);
+        bruteforceProtectionService.assertNotBlocked(keyIpEmail);
+
         var user = userRepository.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new BadCredentialsException("Credenciais inválidas!"));
+                .orElseThrow(() -> {
+                    bruteforceProtectionService.onLoginFailure(keyIp);
+                    bruteforceProtectionService.onLoginFailure(keyIpEmail);
+                    return new BadCredentialsException("Credenciais inválidas!");
+                });
+
 
         var roles = user.getRoles().stream()
                 .map(Role::getName)
                 .toList();
 
         if ( !isLoginCorret(loginRequest.getPassword(), user.getPassword()) ) {
+            bruteforceProtectionService.onLoginFailure(keyIp);
+            bruteforceProtectionService.onLoginFailure(keyIpEmail);
             throw new BadCredentialsException("Credenciais inválidas!");
         }
+
+        bruteforceProtectionService.onLoginSuccess(keyIp);
+        bruteforceProtectionService.onLoginSuccess(keyIpEmail);
 
         var now = Instant.now();
         var expiresIn = 300L;
@@ -87,5 +110,13 @@ public class AuthService {
 
     private boolean isLoginCorret(String loginPassword, String userPassword) {
         return bCryptPasswordEncoder.matches(loginPassword, userPassword);
+    }
+
+    private String clientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }
