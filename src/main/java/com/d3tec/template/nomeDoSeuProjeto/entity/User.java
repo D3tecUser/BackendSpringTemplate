@@ -33,9 +33,9 @@ public class User implements Serializable {
             generator = "users_seq_generator"
     )
     private Long id;
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String email;
-    @Column(length = 255)
+    @Column(length = 255, nullable = false)
     @JsonIgnore
     private String password;
 

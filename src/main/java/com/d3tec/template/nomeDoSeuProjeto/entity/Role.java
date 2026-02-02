@@ -32,6 +32,7 @@ public class Role implements Serializable {
             generator = "role_seq_generator"
     )
     private Long id;
+    @Column(nullable = false, unique = true)
     private String name;
     private LocalDateTime createdAt;
 

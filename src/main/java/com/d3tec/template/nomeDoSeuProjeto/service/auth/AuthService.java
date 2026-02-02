@@ -9,6 +9,8 @@ import com.d3tec.template.nomeDoSeuProjeto.entity.User;
 import com.d3tec.template.nomeDoSeuProjeto.repository.RoleRepository;
 import com.d3tec.template.nomeDoSeuProjeto.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -17,11 +19,11 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final JwtEncoder jwtEncoder;
@@ -29,20 +31,28 @@ public class AuthService {
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final RoleRepository roleRepository;
 
+    @Value("${spring.application.name}")
+    private String issuer;
+
     public LoginResponse login(LoginRequest loginRequest) {
         var user = userRepository.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new BadCredentialsException("Usuário ou senha incorretos!"));
+                .orElseThrow(() -> new BadCredentialsException("Credenciais inválidas!"));
+
+        var roles = user.getRoles().stream()
+                .map(Role::getName)
+                .toList();
 
         if ( !isLoginCorret(loginRequest.getPassword(), user.getPassword()) ) {
-            throw new BadCredentialsException("Senha incorreta!");
+            throw new BadCredentialsException("Credenciais inválidas!");
         }
 
         var now = Instant.now();
         var expiresIn = 300L;
 
         var claims = JwtClaimsSet.builder()
-                .issuer("NOME_DO_PROJETO") // TODO -> Coloque aqui o nome do seu projeto
+                .issuer(issuer)
                 .subject(user.getId().toString())
+                .claim("roles", roles)
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(expiresIn))
                 .build();
