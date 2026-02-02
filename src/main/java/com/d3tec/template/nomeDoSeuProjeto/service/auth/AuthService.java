@@ -72,7 +72,7 @@ public class AuthService {
             throw new BadCredentialsException("Um usuário com esse email já existe!");
         }
 
-        var basicRole = roleRepository.findByName(Role.RoleValues.BASIC.name())
+        var basicRole = roleRepository.findByName("BASIC")
                 .orElseThrow(() -> new RuntimeException("Role não encontrada!"));
 
         User user = new User();
