@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
@@ -18,7 +19,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
         JOIN u.roles r
         where r.name = :role
     """)
-    Optional<User> findByRole(
+    Set<Optional<User>> findByRole(
         @Param("role") String role
     );
 }

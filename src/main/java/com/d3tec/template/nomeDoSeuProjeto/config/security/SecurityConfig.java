@@ -44,11 +44,18 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(authorize -> authorize
-                    .requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/auth/login",
+                                "/auth/register",
+                                "/mfa/verify",
+                                "/contact/sendMail"
+                        ).permitAll()
                     .requestMatchers(
                             "/v3/api-docs/**",
                             "/swagger-ui/**",
-                            "/swagger-ui.html").permitAll()
+                            "/swagger-ui.html"
+                    ).permitAll()
                     .anyRequest().authenticated())
                 .oauth2ResourceServer(
                     oauth2 -> oauth2

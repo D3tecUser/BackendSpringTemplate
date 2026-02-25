@@ -10,13 +10,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -42,9 +42,9 @@ public class SetupInicial implements ApplicationRunner {
     private String adminPassword;
 
     @Override
-    public void run(ApplicationArguments args) throws Exception {
-        Optional<User> adminExists = userRepository.findByRole("ADMIN");
-        if (adminExists.isPresent()) {
+    public void run(ApplicationArguments args) {
+        Set<Optional<User>> adminExists = userRepository.findByRole("ADMIN");
+        if (adminExists.stream().anyMatch(u -> u.isPresent())) {
             return;
         }
 

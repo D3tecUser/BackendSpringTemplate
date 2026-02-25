@@ -47,6 +47,13 @@ public class User implements Serializable {
     )
     private Set<Role> roles;
 
+    @JsonIgnore
+    @Column(name = "mfa_enabled", nullable = false)
+    private boolean mfaEnabled;
+    @JsonIgnore
+    @Column(name = "secret", length = 64)
+    private String secret;
+
     private LocalDateTime createdAt =  LocalDateTime.now();
     private LocalDateTime updatedAt;
 }

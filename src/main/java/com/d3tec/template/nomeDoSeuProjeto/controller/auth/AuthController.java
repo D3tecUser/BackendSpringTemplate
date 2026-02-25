@@ -1,4 +1,4 @@
-package com.d3tec.template.nomeDoSeuProjeto.controller;
+package com.d3tec.template.nomeDoSeuProjeto.controller.auth;
 
 import com.d3tec.template.nomeDoSeuProjeto.dto.LoginRequest;
 import com.d3tec.template.nomeDoSeuProjeto.dto.LoginResponse;

@@ -7,4 +7,8 @@ import lombok.Data;
 public class LoginResponse {
     @Schema(example = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...", description = "JWT de acesso")
     private String token;
+    private boolean authenticated;
+    private boolean mfaRequired;
+    private String mfaToken;       // token curto (mfaRequired = true)
+    private Long expiresInSeconds;
 }
