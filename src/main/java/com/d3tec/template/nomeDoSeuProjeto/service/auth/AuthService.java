@@ -1,13 +1,8 @@
 package com.d3tec.template.nomeDoSeuProjeto.service.auth;
 
-import com.d3tec.template.nomeDoSeuProjeto.dto.LoginRequest;
-import com.d3tec.template.nomeDoSeuProjeto.dto.LoginResponse;
-import com.d3tec.template.nomeDoSeuProjeto.dto.RegisterRequest;
-import com.d3tec.template.nomeDoSeuProjeto.dto.mfa.MfaSetupResponse;
-import com.d3tec.template.nomeDoSeuProjeto.dto.mfa.MfaVerifyRequest;
+import com.d3tec.template.nomeDoSeuProjeto.dto.*;
 import com.d3tec.template.nomeDoSeuProjeto.entity.Role;
 import com.d3tec.template.nomeDoSeuProjeto.entity.User;
-import com.d3tec.template.nomeDoSeuProjeto.exception.exceptions.ApiException;
 import com.d3tec.template.nomeDoSeuProjeto.exception.exceptions.ConflictException;
 import com.d3tec.template.nomeDoSeuProjeto.repository.RoleRepository;
 import com.d3tec.template.nomeDoSeuProjeto.repository.UserRepository;
@@ -15,12 +10,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
 
@@ -30,11 +25,11 @@ import java.util.Set;
 public class AuthService {
 
     private final JwtEncoder jwtEncoder;
-    private final JwtDecoder jwtDecoder;
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final RoleRepository roleRepository;
     private final MfaTokenManager mfaTokenManager;
+    private final RefreshTokenService refreshTokenService;
 
     private final BruteforceProtectionService bruteforceProtectionService;
     private final HttpServletRequest request;
@@ -66,7 +61,7 @@ public class AuthService {
                 .map(Role::getName)
                 .toList();
 
-        if ( !isLoginCorret(loginRequest.getPassword(), user.getPassword()) ) {
+        if ( !passwordMatches(loginRequest.getPassword(), user.getPassword()) ) {
             bruteforceProtectionService.onLoginFailure(keyIp);
             bruteforceProtectionService.onLoginFailure(keyIpEmail);
             throw new BadCredentialsException("Credenciais inválidas!");
@@ -83,7 +78,7 @@ public class AuthService {
             loginResponse.setAuthenticated(false);
             loginResponse.setMfaRequired(true);
             loginResponse.setMfaToken(mfaToken);
-            loginResponse.setExpiresInSeconds(3600L);
+            loginResponse.setExpiresInSeconds(300L);
             return loginResponse;
         }
 
@@ -100,9 +95,10 @@ public class AuthService {
                 .build();
 
         var jwtValue = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-
+        RefreshTokenCreationDto refreshTokenDto = refreshTokenService.create(user, Duration.ofDays(7));
 
         loginResponse.setToken(jwtValue);
+        loginResponse.setRefreshToken(refreshTokenDto.getRawToken());
         loginResponse.setAuthenticated(true);
         loginResponse.setMfaRequired(false);
         loginResponse.setExpiresInSeconds(expiresIn);
@@ -132,107 +128,27 @@ public class AuthService {
         return "Usuário cadastrado com sucesso!";
     }
 
-    public MfaSetupResponse mfaSetupForUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BadCredentialsException("Usuário não encontrado"));
-
-        if (user.isMfaEnabled()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuário ja possui o mfa habilitado!");
-        }
-
-        // se não tem secret por algum motivo, gere
-        if (user.getSecret() == null || user.getSecret().isBlank()) {
-            user.setSecret(mfaTokenManager.generateSecretKey());
-            userRepository.save(user);
-        }
-
-        MfaSetupResponse resp = new MfaSetupResponse();
-        resp.setMfaEnabled(user.isMfaEnabled());
-        resp.setQrCodeDataUri(mfaTokenManager.generateQrCode(user.getEmail(), user.getSecret()));
-
-        return resp;
+    public void logout(String refreshToken) {
+        refreshTokenService.revoke(refreshToken);
     }
 
-    public void confirmMfa(Long userId, String code) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BadCredentialsException("Usuário não encontrado"));
-
-        if (user.isMfaEnabled()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Usuário ja possui o mfa habilitado!");
-        }
-
-        if (user.getSecret() == null || user.getSecret().isBlank()) {
-            throw new BadCredentialsException("MFA não iniciado");
-        }
-
-        if (!mfaTokenManager.verifyTotp(code, user.getSecret())) {
-            throw new BadCredentialsException("Código MFA inválido!");
-        }
-
-        user.setMfaEnabled(true);
-        userRepository.save(user);
-    }
-
-    public LoginResponse verifyMfa(MfaVerifyRequest req) {
-        Jwt jwt = null;
-        try{
-            jwt = jwtDecoder.decode(req.getMfaToken());
-        } catch (Exception e) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "Token expirado");
-        }
-
-
-        // valida claims
-        if (!"mfa_challenge".equals(jwt.getClaimAsString("typ")) ||
-                !"pending".equals(jwt.getClaimAsString("mfa"))) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Token MFA inválido!");
-        }
-
-        Long userId = Long.valueOf(jwt.getSubject());
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Token MFA inválido!"));
-
-        if (!user.isMfaEnabled()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "MFA não habilitado!");
-        }
-
-        if (!mfaTokenManager.verifyTotp(req.getMfaCode(), user.getSecret())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Código MFA inválido!");
-        }
-
-        // emite JWT final
-        var roles = user.getRoles().stream().map(Role::getName).toList();
-        Instant now = Instant.now();
-
-        var claims = JwtClaimsSet.builder()
-                .issuer(issuer)
-                .subject(user.getId().toString())
-                .claim("roles", roles)
-                .claim("typ", "access")
-                .claim("mfa", true)
-                .issuedAt(now)
-                .expiresAt(now.plusSeconds(expiresIn))
-                .build();
-
-        String jwtFinal = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-
-        LoginResponse resp = new LoginResponse();
-        resp.setAuthenticated(true);
-        resp.setMfaRequired(false);
-        resp.setToken(jwtFinal);
-        resp.setExpiresInSeconds(expiresIn);
-        return resp;
-    }
-
-    private boolean isLoginCorret(String loginPassword, String userPassword) {
+    private boolean passwordMatches(String loginPassword, String userPassword) {
         return bCryptPasswordEncoder.matches(loginPassword, userPassword);
     }
 
     private String clientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+
+        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+            return xForwardedFor.split(",")[0].trim();
         }
+
+        String realIp = request.getHeader("X-Real-IP");
+
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp;
+        }
+
         return request.getRemoteAddr();
     }
 

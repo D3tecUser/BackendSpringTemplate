@@ -1,6 +1,5 @@
-package com.d3tec.template.nomeDoSeuProjeto.service.auth;
+package com.d3tec.template.nomeDoSeuProjeto.config;
 
-import com.d3tec.template.nomeDoSeuProjeto.entity.Role;
 import com.d3tec.template.nomeDoSeuProjeto.entity.User;
 import com.d3tec.template.nomeDoSeuProjeto.repository.RoleRepository;
 import com.d3tec.template.nomeDoSeuProjeto.repository.UserRepository;
@@ -16,7 +15,6 @@ import org.springframework.core.env.Profiles;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
