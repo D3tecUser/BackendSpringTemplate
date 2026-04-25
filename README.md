@@ -101,3 +101,7 @@ Fluxo inicial recomendado para teste de autenticação:
 # Gerar pacote
 ./mvnw clean package
 ```
+
+## Diretrizes GitHub (Resumo)
+Arquivo: docs/GITHUB_PROJECT_GUIDELINES_SUMARIO.md
+
