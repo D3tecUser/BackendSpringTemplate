@@ -2,7 +2,11 @@ package com.d3tec.template.nomeDoSeuProjeto.controller.auth;
 
 import com.d3tec.template.nomeDoSeuProjeto.dto.LoginRequest;
 import com.d3tec.template.nomeDoSeuProjeto.dto.LoginResponse;
+import com.d3tec.template.nomeDoSeuProjeto.dto.ForgotPasswordRequest;
+import com.d3tec.template.nomeDoSeuProjeto.dto.GenericMessageResponse;
 import com.d3tec.template.nomeDoSeuProjeto.dto.RegisterRequest;
+import com.d3tec.template.nomeDoSeuProjeto.dto.RegisterResponse;
+import com.d3tec.template.nomeDoSeuProjeto.dto.ResendVerificationRequest;
 import com.d3tec.template.nomeDoSeuProjeto.service.auth.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -53,10 +57,35 @@ public class AuthController {
                     content = @Content)
     })
     @SecurityRequirement(name = "")
-    public ResponseEntity<String> register(@RequestBody @Valid RegisterRequest registerRequest) {
+    public ResponseEntity<RegisterResponse> register(@RequestBody @Valid RegisterRequest registerRequest) {
         return ResponseEntity.ok(
                 authService.register(registerRequest)
         );
+    }
+
+    @GetMapping("/verify-email")
+    @Operation(summary = "Confirmar email", description = "Confirma o email do usuário a partir de um token enviado por email.")
+    @SecurityRequirement(name = "")
+    public ResponseEntity<GenericMessageResponse> verifyEmail(@RequestParam String token) {
+        return ResponseEntity.ok(authService.verifyEmail(token));
+    }
+
+    @PostMapping("/resend-verification")
+    @Operation(summary = "Reenviar email de confirmação", description = "Reenvia o email de confirmação para usuários ainda não verificados.")
+    @SecurityRequirement(name = "")
+    public ResponseEntity<GenericMessageResponse> resendVerification(
+            @RequestBody @Valid ResendVerificationRequest request
+    ) {
+        return ResponseEntity.ok(authService.resendVerification(request));
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Solicitar recuperação de senha", description = "Envia instruções por email para continuar o fluxo de recuperação.")
+    @SecurityRequirement(name = "")
+    public ResponseEntity<GenericMessageResponse> forgotPassword(
+            @RequestBody @Valid ForgotPasswordRequest request
+    ) {
+        return ResponseEntity.ok(authService.forgotPassword(request));
     }
 
     @GetMapping("/logout/{token}")

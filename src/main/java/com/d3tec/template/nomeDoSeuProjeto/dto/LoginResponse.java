@@ -12,4 +12,5 @@ public class LoginResponse {
     private boolean mfaRequired;
     private String mfaToken;       // token curto (mfaRequired = true)
     private Long expiresInSeconds;
+    private boolean emailVerificationRequired;
 }
