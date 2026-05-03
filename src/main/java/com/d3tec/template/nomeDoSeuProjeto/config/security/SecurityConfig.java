@@ -49,9 +49,15 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/auth/login",
                                 "/auth/register",
+                                "/auth/resend-verification",
+                                "/auth/forgot-password",
                                 "/mfa/verify",
                                 "/contact/sendMail"
                         ).permitAll()
+                    .requestMatchers(
+                            HttpMethod.GET,
+                            "/auth/verify-email"
+                    ).permitAll()
                     .requestMatchers(
                             "/v3/api-docs/**",
                             "/swagger-ui/**",

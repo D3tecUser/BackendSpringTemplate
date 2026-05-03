@@ -53,6 +53,8 @@ public class User implements Serializable {
     @JsonIgnore
     @Column(name = "secret", length = 64)
     private String secret;
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
 
     private LocalDateTime createdAt =  LocalDateTime.now();
     private LocalDateTime updatedAt;

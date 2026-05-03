@@ -58,6 +58,8 @@ public class SetupInicial implements ApplicationRunner {
         admin.setEmail(adminEmail);
         admin.setPassword(passwordEncoder.encode(adminPassword));
         admin.setRoles(Set.of(adminRole));
+        admin.setEmailVerified(true);
+        admin.setMfaEnabled(false);
 
         userRepository.save(admin);
 

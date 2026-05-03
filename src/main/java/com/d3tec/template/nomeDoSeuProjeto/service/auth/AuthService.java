@@ -1,9 +1,12 @@
 package com.d3tec.template.nomeDoSeuProjeto.service.auth;
 
 import com.d3tec.template.nomeDoSeuProjeto.dto.*;
+import com.d3tec.template.nomeDoSeuProjeto.email.service.ApplicationEmailService;
+import com.d3tec.template.nomeDoSeuProjeto.entity.EmailTokenType;
 import com.d3tec.template.nomeDoSeuProjeto.entity.Role;
 import com.d3tec.template.nomeDoSeuProjeto.entity.User;
 import com.d3tec.template.nomeDoSeuProjeto.exception.exceptions.ConflictException;
+import com.d3tec.template.nomeDoSeuProjeto.exception.exceptions.EmailNotVerifiedException;
 import com.d3tec.template.nomeDoSeuProjeto.repository.RoleRepository;
 import com.d3tec.template.nomeDoSeuProjeto.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,6 +33,8 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final MfaTokenManager mfaTokenManager;
     private final RefreshTokenService refreshTokenService;
+    private final EmailTokenService emailTokenService;
+    private final ApplicationEmailService applicationEmailService;
 
     private final BruteforceProtectionService bruteforceProtectionService;
     private final HttpServletRequest request;
@@ -67,6 +72,10 @@ public class AuthService {
             throw new BadCredentialsException("Credenciais inválidas!");
         }
 
+        if (!user.isEmailVerified()) {
+            throw new EmailNotVerifiedException("Email não verificado. Solicite um novo link de confirmação.");
+        }
+
         bruteforceProtectionService.onLoginSuccess(keyIp);
         bruteforceProtectionService.onLoginSuccess(keyIpEmail);
 
@@ -77,6 +86,7 @@ public class AuthService {
 
             loginResponse.setAuthenticated(false);
             loginResponse.setMfaRequired(true);
+            loginResponse.setEmailVerificationRequired(false);
             loginResponse.setMfaToken(mfaToken);
             loginResponse.setExpiresInSeconds(300L);
             return loginResponse;
@@ -101,14 +111,16 @@ public class AuthService {
         loginResponse.setRefreshToken(refreshTokenDto.getRawToken());
         loginResponse.setAuthenticated(true);
         loginResponse.setMfaRequired(false);
+        loginResponse.setEmailVerificationRequired(false);
         loginResponse.setExpiresInSeconds(expiresIn);
 
         return loginResponse;
     }
 
-    public String register(RegisterRequest registerRequest) {
+    public RegisterResponse register(RegisterRequest registerRequest) {
+        String normalizedEmail = registerRequest.getEmail().trim().toLowerCase();
         // Verifica se o usuario ja existe no banco de dados
-        var existingUser = userRepository.findByEmail(registerRequest.getEmail());
+        var existingUser = userRepository.findByEmail(normalizedEmail);
         if ( existingUser.isPresent() ) {
             throw new ConflictException("E-mail já cadastrado");
         }
@@ -117,19 +129,61 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Role não encontrada!"));
 
         User user = new User();
-        user.setEmail(registerRequest.getEmail().trim().toLowerCase());
+        user.setEmail(normalizedEmail);
         user.setPassword(bCryptPasswordEncoder.encode(registerRequest.getPassword()));
         user.setRoles(Set.of(basicRole));
         user.setSecret(mfaTokenManager.generateSecretKey());
         user.setMfaEnabled(false);
+        user.setEmailVerified(false);
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        String rawToken = emailTokenService.create(savedUser, EmailTokenType.EMAIL_VERIFICATION, Duration.ofHours(24));
+        applicationEmailService.sendEmailVerification(savedUser, rawToken);
 
-        return "Usuário cadastrado com sucesso!";
+        return RegisterResponse.builder()
+                .message("Usuário cadastrado com sucesso! Verifique seu email para liberar o acesso.")
+                .email(savedUser.getEmail())
+                .verificationRequired(true)
+                .build();
     }
 
     public void logout(String refreshToken) {
         refreshTokenService.revoke(refreshToken);
+    }
+
+    public GenericMessageResponse verifyEmail(String token) {
+        User user = emailTokenService.consume(token, EmailTokenType.EMAIL_VERIFICATION);
+        user.setEmailVerified(true);
+        userRepository.save(user);
+        return new GenericMessageResponse("Email verificado com sucesso!");
+    }
+
+    public GenericMessageResponse resendVerification(ResendVerificationRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        userRepository.findByEmail(email)
+                .filter(user -> !user.isEmailVerified())
+                .ifPresent(user -> {
+                    String rawToken = emailTokenService.create(user, EmailTokenType.EMAIL_VERIFICATION, Duration.ofHours(24));
+                    applicationEmailService.sendEmailVerification(user, rawToken);
+                });
+
+        return new GenericMessageResponse(
+                "Se o email estiver cadastrado e pendente de verificação, uma nova mensagem foi enviada."
+        );
+    }
+
+    public GenericMessageResponse forgotPassword(ForgotPasswordRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        userRepository.findByEmail(email)
+                .filter(User::isEmailVerified)
+                .ifPresent(user -> {
+                    String rawToken = emailTokenService.create(user, EmailTokenType.PASSWORD_RESET, Duration.ofHours(2));
+                    applicationEmailService.sendForgotPassword(user, rawToken);
+                });
+
+        return new GenericMessageResponse(
+                "Se o email estiver cadastrado, enviaremos instruções para continuar a recuperação de senha."
+        );
     }
 
     private boolean passwordMatches(String loginPassword, String userPassword) {

@@ -1,0 +1,6 @@
+Ola,
+
+Para concluir seu cadastro no {{appName}}, confirme seu email acessando o link abaixo:
+{{verificationUrl}}
+
+Se voce nao solicitou esse cadastro, ignore esta mensagem.
