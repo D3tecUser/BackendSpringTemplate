@@ -51,7 +51,7 @@ public class User implements Serializable {
     @Column(name = "mfa_enabled", nullable = false)
     private boolean mfaEnabled;
     @JsonIgnore
-    @Column(name = "secret", length = 64)
+    @Column(name = "secret", length = 512)
     private String secret;
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;

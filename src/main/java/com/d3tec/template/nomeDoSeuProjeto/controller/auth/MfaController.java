@@ -3,6 +3,7 @@ package com.d3tec.template.nomeDoSeuProjeto.controller.auth;
 import com.d3tec.template.nomeDoSeuProjeto.config.security.UsuarioPrincipal;
 import com.d3tec.template.nomeDoSeuProjeto.dto.LoginResponse;
 import com.d3tec.template.nomeDoSeuProjeto.dto.mfa.MfaConfirmRequest;
+import com.d3tec.template.nomeDoSeuProjeto.dto.mfa.MfaDisableRequest;
 import com.d3tec.template.nomeDoSeuProjeto.dto.mfa.MfaSetupResponse;
 import com.d3tec.template.nomeDoSeuProjeto.dto.mfa.MfaVerifyRequest;
 import com.d3tec.template.nomeDoSeuProjeto.service.auth.MfaService;
@@ -18,6 +19,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -79,6 +81,7 @@ public class MfaController {
                     content = @Content
             )
     })
+    @PreAuthorize("hasAuthority('PRIV_MFA_SELF_MANAGE')")
     public ResponseEntity<?> mfaSetup(@AuthenticationPrincipal UsuarioPrincipal usuarioPrincipal) {
         return ResponseEntity.ok(
                 mfaService.mfaSetupForUser(
@@ -123,6 +126,7 @@ public class MfaController {
                     """)
             )
     )
+    @PreAuthorize("hasAuthority('PRIV_MFA_SELF_MANAGE')")
     public ResponseEntity<?> confirmMfa(@AuthenticationPrincipal UsuarioPrincipal usuarioPrincipal,
                                         @Valid @RequestBody MfaConfirmRequest req) {
         mfaService.confirmMfa(
@@ -139,13 +143,11 @@ public class MfaController {
                     Usado quando /auth/login retorna mfaRequired=true.
                     Envie:
                     - mfaToken: token de desafio retornado no login (curta duração)
-                    - code: código TOTP (6 dígitos)
+                    - mfaCode: código TOTP (6 dígitos)
 
                     Se válido, retorna o JWT final de acesso.
-
-                    Requer JWT de acesso no header Authorization (Bearer), conforme seu controller atual.
                     """,
-            security = @SecurityRequirement(name = "bearerAuth")
+            security = @SecurityRequirement(name = "")
     )
     @ApiResponses({
             @ApiResponse(
@@ -158,7 +160,8 @@ public class MfaController {
                         {
                           "authenticated": true,
                           "mfaRequired": false,
-                          "token": "eyJhbGciOiJSUzI1NiJ9.eyJ0eXAiOiJhY2Nlc3MiLCJtZmEiOnRydWUsInJvbGVzIjpbIkFETUlOIl0sImlzcyI6IkFnb3JhQXBpIiwic3ViIjoiMSIsImlhdCI6MTc3MTQzOTg0NiwgImV4cCI6MTc3MTQ4MzA0Nn0....",
+                          "token": "eyJhbGciOiJSUzI1NiJ9.eyJ0eXAiOiJhY2Nlc3MiLCJtZmFfdmVyaWZpZWQiOnRydWUsInJvbGVzIjpbIkFETUlOIl0sInByaXZpbGVnZXMiOlsiTUZBX1NFTEZfTUFOQUdFIl0sImlzcyI6Ik5vbWVEb1NldVByb2pldG8iLCJzdWIiOiIxIn0....",
+                          "refreshToken": "99b5fec941ae8fd37e.",
                           "expiresInSeconds": 3600
                         }
                         """)
@@ -181,7 +184,7 @@ public class MfaController {
                     examples = @ExampleObject(value = """
                     {
                       "mfaToken": "eyJhbGciOiJSUzI1NiJ9.eyJ0eXAiOiJtZmFfY2hhbGxlbmdlIiwibWZhIjoicGVuZGluZyIsInN1YiI6IjEiLCJleHAiOjE3NzE0...",
-                      "code": "123456"
+                      "mfaCode": "123456"
                     }
                     """)
             )
@@ -193,5 +196,29 @@ public class MfaController {
                         req
                 )
         );
+    }
+
+    @DeleteMapping
+    @Operation(
+            summary = "Desabilitar MFA",
+            description = """
+                    Remove a autenticação em dois fatores da conta autenticada.
+                    Exige a senha atual e um código TOTP válido para evitar desabilitação indevida.
+                    """,
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "MFA removido com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Request inválido", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Não autenticado ou credenciais inválidas", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Sem permissão de acesso", content = @Content)
+    })
+    @PreAuthorize("hasAuthority('PRIV_MFA_SELF_DISABLE')")
+    public ResponseEntity<?> disableMfa(
+            @AuthenticationPrincipal UsuarioPrincipal usuarioPrincipal,
+            @Valid @RequestBody MfaDisableRequest request
+    ) {
+        mfaService.disableMfa(usuarioPrincipal.getUserDto().getId(), request);
+        return ResponseEntity.noContent().build();
     }
 }

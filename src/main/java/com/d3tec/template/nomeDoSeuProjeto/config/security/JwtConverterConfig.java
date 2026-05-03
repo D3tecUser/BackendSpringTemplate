@@ -9,7 +9,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 public class JwtConverterConfig {
@@ -23,10 +25,17 @@ public class JwtConverterConfig {
 
             var roles = jwt.getClaimAsStringList("roles");
             if (roles == null) roles = List.of();
+            var privileges = jwt.getClaimAsStringList("privileges");
+            if (privileges == null) privileges = List.of();
 
             var authorities = roles.stream()
                     .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-                    .toList();
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            authorities.addAll(
+                    privileges.stream()
+                            .map(privilege -> new SimpleGrantedAuthority("PRIV_" + privilege))
+                            .toList()
+            );
 
             var user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
