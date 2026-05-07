@@ -4,9 +4,11 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class MfaVerifyRequest {
+public class MfaDisableRequest {
+
     @NotBlank
-    private String mfaToken;
+    private String currentPassword;
+
     @NotBlank
-    private String mfaCode;
+    private String code;
 }

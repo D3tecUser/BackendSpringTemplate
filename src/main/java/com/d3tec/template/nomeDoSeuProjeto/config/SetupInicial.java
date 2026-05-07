@@ -15,7 +15,6 @@ import org.springframework.core.env.Profiles;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
 import java.util.Set;
 
 @Component
@@ -41,8 +40,8 @@ public class SetupInicial implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        Set<Optional<User>> adminExists = userRepository.findByRole("ADMIN");
-        if (adminExists.stream().anyMatch(u -> u.isPresent())) {
+        Set<User> adminExists = userRepository.findByRole("ADMIN");
+        if (!adminExists.isEmpty()) {
             return;
         }
 

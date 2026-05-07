@@ -10,7 +10,7 @@ public class LoginResponse {
     private String refreshToken;
     private boolean authenticated;
     private boolean mfaRequired;
+    private boolean emailVerificationRequired;
     private String mfaToken;       // token curto (mfaRequired = true)
     private Long expiresInSeconds;
-    private boolean emailVerificationRequired;
 }

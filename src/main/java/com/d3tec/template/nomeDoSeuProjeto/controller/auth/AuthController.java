@@ -1,9 +1,11 @@
 package com.d3tec.template.nomeDoSeuProjeto.controller.auth;
 
+import com.d3tec.template.nomeDoSeuProjeto.config.security.UsuarioPrincipal;
 import com.d3tec.template.nomeDoSeuProjeto.dto.LoginRequest;
 import com.d3tec.template.nomeDoSeuProjeto.dto.LoginResponse;
 import com.d3tec.template.nomeDoSeuProjeto.dto.ForgotPasswordRequest;
 import com.d3tec.template.nomeDoSeuProjeto.dto.GenericMessageResponse;
+import com.d3tec.template.nomeDoSeuProjeto.dto.RefreshRequest;
 import com.d3tec.template.nomeDoSeuProjeto.dto.RegisterRequest;
 import com.d3tec.template.nomeDoSeuProjeto.dto.RegisterResponse;
 import com.d3tec.template.nomeDoSeuProjeto.dto.ResendVerificationRequest;
@@ -18,6 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -88,16 +91,17 @@ public class AuthController {
         return ResponseEntity.ok(authService.forgotPassword(request));
     }
 
-    @GetMapping("/logout/{token}")
+    @PostMapping("/logout")
     @Operation(
             summary = "Logout",
             description = "Deslogue do sistema.",
             security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses(@ApiResponse(responseCode = "204", description = "No content"))
     public ResponseEntity<?> logout(
-            @PathVariable String token
+            @AuthenticationPrincipal UsuarioPrincipal usuarioPrincipal,
+            @RequestBody @Valid RefreshRequest request
     ) {
-        authService.logout(token);
+        authService.logout(usuarioPrincipal.getUserDto().getId(), request);
         return ResponseEntity.noContent().build();
     }
 }

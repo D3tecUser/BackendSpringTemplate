@@ -24,7 +24,7 @@ public class RefreshTokenService {
     private final AcessTokenService acessTokenService;
     private final SecureRandom secureRandom;
 
-    public RefreshTokenCreationDto create(User user, Duration duration) {
+    public RefreshTokenCreationDto create(User user, Duration duration, boolean mfaVerified) {
         String rawToken = generateSecureToken();
 
         RefreshToken refreshToken = new RefreshToken();
@@ -33,13 +33,14 @@ public class RefreshTokenService {
         refreshToken.setCreatedAt(Instant.now());
         refreshToken.setExpiresAt(Instant.now().plus(duration));
         refreshToken.setExpired(false);
+        refreshToken.setMfaVerified(mfaVerified);
 
         refreshTokenRepository.save(refreshToken);
 
         return new RefreshTokenCreationDto(rawToken, refreshToken.getExpiresAt());
     }
 
-    public User validateAndGetUser(String rawToken) {
+    public RefreshToken validateAndGetToken(String rawToken) {
         String hash = hashToken(rawToken);
 
         RefreshToken token = refreshTokenRepository.findByTokenHash(hash)
@@ -53,7 +54,7 @@ public class RefreshTokenService {
             throw new BadCredentialsException("Refresh token expirado");
         }
 
-        return token.getUser();
+        return token;
     }
 
     public void revoke(String rawToken) {
@@ -66,16 +67,38 @@ public class RefreshTokenService {
         });
     }
 
+    public void revokeOwnedToken(User owner, String rawToken) {
+        RefreshToken token = validateAndGetToken(rawToken);
+
+        if (!token.getUser().getId().equals(owner.getId())) {
+            throw new BadCredentialsException("Refresh token inválido");
+        }
+
+        token.setExpired(true);
+        token.setExpiredAt(Instant.now());
+        refreshTokenRepository.save(token);
+    }
+
     @Transactional
     public TokenPairDTO refresh(String refreshToken) {
-        User user = validateAndGetUser(refreshToken);
+        RefreshToken persistedToken = validateAndGetToken(refreshToken);
+        User user = persistedToken.getUser();
+
+        if (user.isMfaEnabled() && !Boolean.TRUE.equals(persistedToken.getMfaVerified())) {
+            throw new BadCredentialsException("Sessão inválida para a política atual de MFA. Faça login novamente.");
+        }
 
         revoke(refreshToken);
-        var newRefreshToken = create(user, Duration.ofDays(7));
+        var newRefreshToken = create(user, Duration.ofDays(7), Boolean.TRUE.equals(persistedToken.getMfaVerified()));
 
         // emite JWT final
-        String newJwt = acessTokenService.getAcessToken(user);
+        String newJwt = acessTokenService.getAcessToken(user, Boolean.TRUE.equals(persistedToken.getMfaVerified()));
         return new TokenPairDTO(newJwt, newRefreshToken.getRawToken());
+    }
+
+    @Transactional
+    public void revokeAllByUser(User user) {
+        refreshTokenRepository.deleteAllByUser(user);
     }
 
     private String generateSecureToken() {

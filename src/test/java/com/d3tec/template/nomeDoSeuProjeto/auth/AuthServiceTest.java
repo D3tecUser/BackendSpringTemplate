@@ -39,7 +39,7 @@ class AuthServiceTest {
         UserRepository userRepository = mock(UserRepository.class);
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         RoleRepository roleRepository = mock(RoleRepository.class);
-        MfaTokenManager mfaTokenManager = mock(MfaTokenManager.class);
+        AcessTokenService acessTokenService = mock(AcessTokenService.class);
         RefreshTokenService refreshTokenService = mock(RefreshTokenService.class);
         EmailTokenService emailTokenService = mock(EmailTokenService.class);
         ApplicationEmailService applicationEmailService = mock(ApplicationEmailService.class);
@@ -51,7 +51,7 @@ class AuthServiceTest {
                 userRepository,
                 passwordEncoder,
                 roleRepository,
-                mfaTokenManager,
+                acessTokenService,
                 refreshTokenService,
                 emailTokenService,
                 applicationEmailService,
@@ -64,7 +64,6 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.empty());
         when(roleRepository.findByName("BASIC")).thenReturn(Optional.of(basicRole));
-        when(mfaTokenManager.generateSecretKey()).thenReturn("secret");
         when(emailTokenService.create(any(User.class), any(EmailTokenType.class), any(Duration.class))).thenReturn("token");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
@@ -93,7 +92,7 @@ class AuthServiceTest {
         UserRepository userRepository = mock(UserRepository.class);
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         RoleRepository roleRepository = mock(RoleRepository.class);
-        MfaTokenManager mfaTokenManager = mock(MfaTokenManager.class);
+        AcessTokenService acessTokenService = mock(AcessTokenService.class);
         RefreshTokenService refreshTokenService = mock(RefreshTokenService.class);
         EmailTokenService emailTokenService = mock(EmailTokenService.class);
         ApplicationEmailService applicationEmailService = mock(ApplicationEmailService.class);
@@ -105,7 +104,7 @@ class AuthServiceTest {
                 userRepository,
                 passwordEncoder,
                 roleRepository,
-                mfaTokenManager,
+                acessTokenService,
                 refreshTokenService,
                 emailTokenService,
                 applicationEmailService,
@@ -137,7 +136,7 @@ class AuthServiceTest {
         UserRepository userRepository = mock(UserRepository.class);
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         RoleRepository roleRepository = mock(RoleRepository.class);
-        MfaTokenManager mfaTokenManager = mock(MfaTokenManager.class);
+        AcessTokenService acessTokenService = mock(AcessTokenService.class);
         RefreshTokenService refreshTokenService = mock(RefreshTokenService.class);
         EmailTokenService emailTokenService = mock(EmailTokenService.class);
         ApplicationEmailService applicationEmailService = mock(ApplicationEmailService.class);
@@ -149,7 +148,7 @@ class AuthServiceTest {
                 userRepository,
                 passwordEncoder,
                 roleRepository,
-                mfaTokenManager,
+                acessTokenService,
                 refreshTokenService,
                 emailTokenService,
                 applicationEmailService,
