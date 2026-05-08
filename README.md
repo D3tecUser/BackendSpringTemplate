@@ -93,6 +93,19 @@ Fluxo inicial recomendado para teste de autenticação:
 - `src/main/resources/migrations`: scripts Flyway
 - `src/main/resources/application-*.properties`: configuração por ambiente
 
+## Testes
+Os testes de integração usam **Testcontainers** com PostgreSQL e perfil `test`.
+
+Para executar localmente:
+```bash
+./mvnw test
+```
+
+Pré-requisito importante:
+- Docker em execução (o Testcontainers precisa disso para subir o banco de teste).
+
+No CI (GitHub Actions), use runner Linux com Docker disponível (ex.: `ubuntu-latest`) e execute `./mvnw test`.
+
 ## Comandos úteis
 ```bash
 # Rodar testes
