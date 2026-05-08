@@ -100,3 +100,8 @@ $RECYCLE.BIN/
 *.pem
 *.key*
 *.pub*
+!src/test/resources/test-app.key
+!src/test/resources/test-app.pub
+
+# node
+node_modules/

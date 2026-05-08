@@ -109,6 +109,18 @@ Fluxos novos de email:
 - `src/main/resources/migrations`: scripts Flyway
 - `src/main/resources/application-*.properties`: configuração por ambiente
 
+## Testes
+Os testes de integração usam **Testcontainers** com PostgreSQL e perfil `test`.
+
+Para executar localmente:
+```bash
+./mvnw test
+```
+
+Pré-requisito importante:
+- Docker em execução (o Testcontainers precisa disso para subir o banco de teste).
+
+No CI (GitHub Actions), use runner Linux com Docker disponível (ex.: `ubuntu-latest`) e execute `./mvnw test`.
 ### Como criar novos emails sem conhecer a implementação
 O ponto de entrada para features é o serviço `ApplicationEmailService`.
 
@@ -137,6 +149,9 @@ applicationEmailService.sendPostCreated(
 # Gerar pacote
 ./mvnw clean package
 ```
+
+## Diretrizes GitHub (Resumo)
+Arquivo: docs/GITHUB_PROJECT_GUIDELINES_SUMARIO.md
 
 ## Deploy do sistema de email
 Checklist mínimo:
