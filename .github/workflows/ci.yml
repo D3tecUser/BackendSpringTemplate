@@ -1,0 +1,45 @@
+name: CI - Spring Boot
+
+on:
+  pull_request:
+    branches: [ "main", "develop" ]
+  push:
+    branches: [ "main", "develop" ]
+
+jobs:
+  build:
+    name: Build e Testes (Java)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Configurar Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Cache do Maven
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Gerar chaves JWT para testes
+        run: |
+          openssl genrsa -out src/main/resources/app.key 2048
+          openssl rsa -in src/main/resources/app.key -pubout -out src/main/resources/app.pub
+
+      - name: Build e testes
+        run: ./mvnw clean install
+
+      - name: Upload de relatórios (opcional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios-testes
+          path: target/surefire-reports/
