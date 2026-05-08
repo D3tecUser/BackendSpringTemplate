@@ -50,5 +50,3 @@ Referências
 - GitHub Docs - Branches and merging: https://docs.github.com/en/get-started/using-git/about-branches
 
 ---
-
-Mantenha este arquivo curto e referencie o README principal para exceções ou decisões do time.
