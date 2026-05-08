@@ -1,7 +1,7 @@
 package com.d3tec.template.nomeDoSeuProjeto.controller.auth;
 
 import com.d3tec.template.nomeDoSeuProjeto.dto.RefreshRequest;
-import com.d3tec.template.nomeDoSeuProjeto.dto.mfa.MfaSetupResponse;
+import com.d3tec.template.nomeDoSeuProjeto.dto.TokenPairDTO;
 import com.d3tec.template.nomeDoSeuProjeto.service.auth.RefreshTokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,13 +34,13 @@ public class RefreshTokenController {
             description = "Um novo jwt foi gerado",
             content = @Content(
                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = RefreshRequest.class),
+                    schema = @Schema(implementation = TokenPairDTO.class),
                     examples = {
                             @ExampleObject(
                                     name = "Par de tokens",
                                     value = """
                                 {
-                                  "acessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                  "acessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                                   "refreshToken": "99b5fec941ae8fd37e."
                                 }
                                 """
@@ -48,7 +48,7 @@ public class RefreshTokenController {
                     }
             )
     )})
-    public ResponseEntity<?> refresh(@RequestBody RefreshRequest request) {
+    public ResponseEntity<TokenPairDTO> refresh(@RequestBody RefreshRequest request) {
         return ResponseEntity.ok(
                 refreshTokenService.refresh(request.getRefreshToken())
         );

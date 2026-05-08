@@ -10,6 +10,8 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -21,16 +23,22 @@ public class AcessTokenService {
     @Value("${jwt.token.expires.in}")
     private Long expiresIn;
 
-    public String getAcessToken(User user) {
+    public String getAcessToken(User user, boolean mfaVerified) {
         var roles = user.getRoles().stream().map(Role::getName).toList();
+        var privileges = user.getRoles().stream()
+                .filter(role -> role.getPrivileges() != null)
+                .flatMap(role -> role.getPrivileges().stream())
+                .map(privilege -> privilege.getName())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
         Instant now = Instant.now();
 
         var claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .subject(user.getId().toString())
                 .claim("roles", roles)
+                .claim("privileges", privileges.stream().toList())
                 .claim("typ", "access")
-                .claim("mfa", true)
+                .claim("mfa_verified", mfaVerified)
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(expiresIn))
                 .build();

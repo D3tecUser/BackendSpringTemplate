@@ -33,6 +33,10 @@ public class RefreshToken {
 
     @Column(nullable = false)
     private Boolean expired = false;
+
+    @Column(nullable = false)
+    private Boolean mfaVerified = false;
+
     @Column(nullable = false)
     private Instant expiresAt;
 

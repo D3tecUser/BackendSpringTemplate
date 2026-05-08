@@ -12,6 +12,7 @@ Ele já inclui:
 - refresh token com endpoint de renovação
 - MFA (TOTP) com setup por QR Code e validação
 - controle de tentativas de login (proteção contra brute force)
+- sistema de email transacional com abstração de fila e implementação padrão em Redis
 - documentação OpenAPI/Swagger no perfil de desenvolvimento
 - persistência com PostgreSQL + migrações Flyway
 
@@ -23,6 +24,8 @@ Ele já inclui:
 - Java 21 instalado
 - Maven (ou usar o wrapper `./mvnw` já no projeto)
 - PostgreSQL em execução
+- Redis em execução
+- SMTP disponível (MailHog/Mailpit local ou provedor real)
 
 ## Como usar este projeto como template no GitHub
 
@@ -56,6 +59,12 @@ Campos mais importantes:
 - `spring.datasource.url`
 - `spring.datasource.username`
 - `spring.datasource.password`
+- `spring.data.redis.host`
+- `spring.data.redis.port`
+- `spring.mail.host`
+- `spring.mail.port`
+- `app.mail.from-address`
+- `app.mail.base-url`
 - `bootstrap.admin.email`
 - `bootstrap.admin.password`
 
@@ -82,14 +91,21 @@ Com a aplicação rodando no perfil `dev`:
 
 Fluxo inicial recomendado para teste de autenticação:
 1. `POST /auth/register`
-2. `POST /auth/login`
-3. `POST /mfa/verify` (se MFA estiver ativo)
-4. `POST /refresh`
-5. `GET /auth/logout/{token}`
+2. abrir o link enviado por email em `GET /auth/verify-email?token=...`
+3. `POST /auth/login`
+4. `POST /mfa/verify` (se MFA estiver ativo)
+5. `POST /refresh`
+6. `GET /auth/logout/{token}`
+
+Fluxos novos de email:
+1. `POST /auth/register` cria usuário não verificado e publica email na fila Redis
+2. `POST /auth/resend-verification` reenfileira o email de confirmação
+3. `POST /auth/forgot-password` envia instruções para continuidade do fluxo de recuperação
 
 ## Estrutura rápida
 - `src/main/java/.../controller/auth`: endpoints de autenticação, refresh e MFA
 - `src/main/java/.../service/auth`: regras de login, tokens, MFA e segurança
+- `src/main/java/.../email`: fila abstrata, adapter Redis, templates e envio SMTP
 - `src/main/resources/migrations`: scripts Flyway
 - `src/main/resources/application-*.properties`: configuração por ambiente
 
@@ -105,6 +121,25 @@ Pré-requisito importante:
 - Docker em execução (o Testcontainers precisa disso para subir o banco de teste).
 
 No CI (GitHub Actions), use runner Linux com Docker disponível (ex.: `ubuntu-latest`) e execute `./mvnw test`.
+### Como criar novos emails sem conhecer a implementação
+O ponto de entrada para features é o serviço `ApplicationEmailService`.
+
+Para um novo caso de uso, o desenvolvedor precisa apenas:
+1. adicionar o novo tipo em `EmailType`
+2. adicionar o template correspondente no renderer
+3. criar um método descritivo em `ApplicationEmailService`
+4. chamar esse método a partir do serviço da feature
+
+Exemplo para postagem criada:
+```java
+applicationEmailService.sendPostCreated(
+    PostCreatedEmailPayload.builder()
+        .recipient(usuario.getEmail())
+        .postId(post.getId())
+        .postTitle(post.getTitle())
+        .build()
+);
+```
 
 ## Comandos úteis
 ```bash
@@ -118,3 +153,44 @@ No CI (GitHub Actions), use runner Linux com Docker disponível (ex.: `ubuntu-la
 ## Diretrizes GitHub (Resumo)
 Arquivo: docs/GITHUB_PROJECT_GUIDELINES_SUMARIO.md
 
+## Deploy do sistema de email
+Checklist mínimo:
+- Redis acessível pela aplicação
+- SMTP configurado em `spring.mail.*`
+- URL pública correta em `app.mail.base-url`
+- domínio remetente autenticado com SPF, DKIM e DMARC
+- caixa remetente consistente (`app.mail.from-address`)
+
+Observações operacionais:
+- O Redis é usado apenas para enfileiramento e retry dos jobs de email.
+- O envio real continua sendo feito por SMTP.
+- A abstração `EmailQueuePort` permite adicionar outra implementação de fila no futuro sem alterar os fluxos de autenticação.
+
+## Docker (deploy e teste)
+
+### Subir ambiente de teste local (com Mailpit)
+```bash
+cp .env.test.example .env.test
+docker compose --env-file .env.test -f docker-compose.test.yml up -d
+```
+
+Serviços:
+- Redis: `localhost:6379`
+- Mailpit UI: `http://localhost:8025`
+
+Para derrubar:
+```bash
+docker compose --env-file .env.test -f docker-compose.test.yml down
+```
+
+### Subir ambiente de deploy (com SMTP externo)
+```bash
+cp .env.deploy.example .env.deploy
+# edite .env.deploy com os dados reais de SMTP e domínio
+docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d --build
+```
+
+Para derrubar:
+```bash
+docker compose --env-file .env.deploy -f docker-compose.deploy.yml down
+```

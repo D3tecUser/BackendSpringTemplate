@@ -19,7 +19,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
         JOIN u.roles r
         where r.name = :role
     """)
-    Set<Optional<User>> findByRole(
+    Set<User> findByRole(
         @Param("role") String role
     );
 }
